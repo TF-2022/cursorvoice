@@ -22,10 +22,13 @@ jobs:
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
+      - name: Generate icons
+        run: node scripts/generate-icons.mjs
+
       - name: Download whisper.cpp + ffmpeg
         run: node scripts/download-binaries.mjs
 
-      - name: Build & Package (NSIS installer)
+      - name: Build & Package
         run: npm run build && npx electron-builder --win --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -43,7 +46,10 @@ jobs:
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
-      - name: Install whisper.cpp + ffmpeg via Homebrew
+      - name: Generate icons
+        run: node scripts/generate-icons.mjs
+
+      - name: Download whisper.cpp + ffmpeg
         run: |
           brew install whisper-cpp ffmpeg
           mkdir -p resources/bin/mac
@@ -51,7 +57,7 @@ jobs:
           cp $(which ffmpeg) resources/bin/mac/ffmpeg
           chmod +x resources/bin/mac/*
 
-      - name: Build & Package (DMG + auto-update)
+      - name: Build & Package
         run: npm run build && npx electron-builder --mac --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
