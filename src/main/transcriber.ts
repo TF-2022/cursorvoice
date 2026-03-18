@@ -12,7 +12,6 @@ const SERVER_PORT = 58432;
 const MAX_SERVER_FAILURES = 3;
 const THREADS = Math.max(1, Math.min(8, (os.cpus().length || 4) - 1));
 
-// Keep-alive agent — reuse TCP connections
 const httpAgent = new http.Agent({ keepAlive: true, maxSockets: 1 });
 
 interface TranscribeOptions {
@@ -23,10 +22,8 @@ interface TranscribeOptions {
 }
 
 export async function startWhisperServer(modelPath: string): Promise<void> {
-  // If same model already running, skip
   if (serverProcess && serverReady && currentModelPath === modelPath) return;
 
-  // If different model, restart
   stopWhisperServer();
 
   const serverPath = getWhisperServerPath();
@@ -45,30 +42,42 @@ export async function startWhisperServer(modelPath: string): Promise<void> {
       "--best-of", "1",
     ], { stdio: ["ignore", "pipe", "pipe"] });
 
-    let started = false;
-
-    const onOutput = (data: Buffer) => {
-      if (!started && data.toString().match(/listening|running|model loaded/i)) {
-        started = true;
-        serverReady = true;
-        resolve();
-      }
-    };
-
-    serverProcess.stdout?.on("data", onOutput);
-    serverProcess.stderr?.on("data", onOutput);
+    serverProcess.stdout?.on("data", (d: Buffer) => {
+      const msg = d.toString().trim();
+      if (msg) console.log(`[whisper-server] ${msg.slice(0, 200)}`);
+    });
+    serverProcess.stderr?.on("data", (d: Buffer) => {
+      const msg = d.toString().trim();
+      if (msg) console.log(`[whisper-server] ${msg.slice(0, 200)}`);
+    });
     serverProcess.on("error", () => { serverReady = false; resolve(); });
     serverProcess.on("exit", () => { serverReady = false; serverProcess = null; });
 
-    // 15s timeout — if it can't start by then, it won't
-    setTimeout(() => {
-      if (!started) {
+    // Poll HTTP until server responds (more reliable than parsing output)
+    let attempts = 0;
+    const poll = setInterval(() => {
+      attempts++;
+      if (!serverProcess) { clearInterval(poll); resolve(); return; }
+
+      const req = http.get(`http://127.0.0.1:${SERVER_PORT}/`, (res) => {
+        clearInterval(poll);
+        serverReady = true;
+        console.log(`[whisper-server] READY in ${attempts * 500}ms`);
+        resolve();
+        res.resume();
+      });
+      req.on("error", () => {});
+      req.setTimeout(400, () => req.destroy());
+
+      if (attempts >= 120) { // 60s max
+        clearInterval(poll);
+        console.log("[whisper-server] timeout");
         serverReady = false;
         serverProcess?.kill();
         serverProcess = null;
         resolve();
       }
-    }, 15000);
+    }, 500);
   });
 }
 
@@ -81,7 +90,6 @@ export function stopWhisperServer() {
   }
 }
 
-// Restart server with a new model (called when user switches model)
 export async function restartWithModel(modelPath: string): Promise<void> {
   stopWhisperServer();
   if (fs.existsSync(modelPath) && fs.existsSync(getWhisperServerPath())) {
@@ -185,16 +193,23 @@ function transcribeViaCLI(options: TranscribeOptions): Promise<string> {
 }
 
 export async function transcribe(options: TranscribeOptions): Promise<string> {
-  // Use server if ready and hasn't failed too many times
+  const t0 = Date.now();
+
   if (serverReady && serverProcess && serverFailCount < MAX_SERVER_FAILURES) {
     try {
       const result = await transcribeViaServer(options);
-      serverFailCount = 0; // Reset on success
+      serverFailCount = 0;
+      console.log(`[transcribe] server ${Date.now() - t0}ms "${result.slice(0, 50)}"`);
       return result;
-    } catch {
+    } catch (e: any) {
+      console.log(`[transcribe] server failed: ${e.message}`);
       serverFailCount++;
     }
+  } else {
+    console.log(`[transcribe] CLI mode (server=${serverReady}, fails=${serverFailCount})`);
   }
 
-  return await transcribeViaCLI(options);
+  const result = await transcribeViaCLI(options);
+  console.log(`[transcribe] cli ${Date.now() - t0}ms "${result.slice(0, 50)}"`);
+  return result;
 }

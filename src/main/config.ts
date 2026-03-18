@@ -15,7 +15,7 @@ export interface AppConfig {
 
 const DEFAULTS: AppConfig = {
   hotkey: "CommandOrControl+Shift+H",
-  model: "small",
+  model: "base",
   language: "fr",
   inputDevice: "default",
   launchAtStartup: false,

@@ -15,18 +15,18 @@ export const MODELS = {
   },
   base: {
     label: "Standard",
-    desc: "Bon compromis vitesse/qualité",
+    desc: "Meilleur compromis vitesse/qualité",
     size: "142 Mo",
     speedLabel: "Rapide",
-    recommended: false,
+    recommended: true,
     url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin",
   },
   small: {
     label: "Précis",
-    desc: "Meilleur compromis vitesse/qualité",
+    desc: "Haute qualité, plus lent",
     size: "466 Mo",
-    speedLabel: "Rapide",
-    recommended: true,
+    speedLabel: "Modéré",
+    recommended: false,
     url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin",
   },
   medium: {
