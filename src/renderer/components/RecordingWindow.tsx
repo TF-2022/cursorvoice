@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Square, Check } from "lucide-react";
+import { Square, Check, X } from "lucide-react";
 
 type Status = "idle" | "recording" | "transcribing" | "injecting" | "done" | "empty" | "error";
 
@@ -8,9 +8,10 @@ interface Props {
   stream: MediaStream | null;
   onOpenSettings?: () => void;
   onStop?: () => void;
+  onDismiss?: () => void;
 }
 
-export default function RecordingWindow({ status, stream, onOpenSettings, onStop }: Props) {
+export default function RecordingWindow({ status, stream, onOpenSettings, onStop, onDismiss }: Props) {
   const isActive = status === "recording";
   const isProcessing = status === "transcribing" || status === "injecting";
   const isDone = status === "done";
@@ -27,12 +28,12 @@ export default function RecordingWindow({ status, stream, onOpenSettings, onStop
       <div className="drag-region" style={{
         display: "flex", alignItems: "center", justifyContent: "center",
         height: 48,
-        padding: isActive ? "0 12px 0 16px" : "0 14px",
+        padding: isActive ? "0 10px" : "0 14px",
         borderRadius: 24,
         background: "hsla(240, 10%, 5%, 0.95)",
         border: "1px solid hsla(240, 4%, 20%, 0.6)",
         transition: "padding 0.3s ease, min-width 0.3s ease",
-        minWidth: isActive ? 180 : isDone ? 100 : isProcessing ? 110 : 48,
+        minWidth: isActive ? 220 : isDone ? 100 : isProcessing ? 110 : 48,
         gap: 8,
       }}>
 
@@ -51,25 +52,51 @@ export default function RecordingWindow({ status, stream, onOpenSettings, onStop
 
         {isActive && (
           <>
+            {/* Dismiss button (left) — app branding blue */}
+            <button
+              className="no-drag"
+              onMouseDown={(e) => { e.preventDefault(); onDismiss?.(); }}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "center",
+                width: 24, height: 24, borderRadius: 12,
+                background: "hsla(217, 91%, 60%, 0.1)",
+                border: "none", color: "hsla(217, 91%, 60%, 0.6)",
+                cursor: "pointer", padding: 0, flexShrink: 0,
+                transition: "all 0.15s",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "hsla(217, 91%, 60%, 0.2)";
+                e.currentTarget.style.color = "hsl(217, 91%, 60%)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "hsla(217, 91%, 60%, 0.1)";
+                e.currentTarget.style.color = "hsla(217, 91%, 60%, 0.6)";
+              }}
+            >
+              <X size={12} strokeWidth={2.5} />
+            </button>
+
             <LiveWaveform stream={stream} />
+
+            {/* Stop button (right) — red for clear contrast */}
             <button
               className="no-drag"
               onMouseDown={(e) => { e.preventDefault(); onStop?.(); }}
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center",
                 width: 28, height: 28, borderRadius: 14,
-                background: "hsla(0, 0%, 100%, 0.1)",
-                border: "none", color: "hsla(0,0%,100%,0.6)",
+                background: "hsla(0, 84%, 60%, 0.15)",
+                border: "none", color: "hsl(0, 84%, 60%)",
                 cursor: "pointer", padding: 0, flexShrink: 0,
                 transition: "all 0.15s",
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = "hsla(0, 0%, 100%, 0.2)";
+                e.currentTarget.style.background = "hsl(0, 84%, 60%)";
                 e.currentTarget.style.color = "white";
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = "hsla(0, 0%, 100%, 0.1)";
-                e.currentTarget.style.color = "hsla(0,0%,100%,0.6)";
+                e.currentTarget.style.background = "hsla(0, 84%, 60%, 0.15)";
+                e.currentTarget.style.color = "hsl(0, 84%, 60%)";
               }}
             >
               <Square size={10} fill="currentColor" />

@@ -48,7 +48,7 @@ function send(channel: string, ...args: any[]) {
 
 function createRecordingWindow(): BrowserWindow {
   const win = new BrowserWindow({
-    width: 200,
+    width: 260,
     height: 72,
     useContentSize: true, // Size = content area, not window frame
     show: false,
@@ -126,13 +126,13 @@ function startRecording() {
   }
 
   isRecording = true;
-  recordingWindow.setContentSize(200, 72);
+  recordingWindow.setContentSize(260, 72);
   const savedPos = getConfig("windowPosition");
   if (savedPos) {
     recordingWindow.setPosition(savedPos.x, savedPos.y);
   } else {
     const { width: screenW, height: screenH } = require("electron").screen.getPrimaryDisplay().workAreaSize;
-    recordingWindow.setPosition(Math.round((screenW - 200) / 2), screenH - 100);
+    recordingWindow.setPosition(Math.round((screenW - 260) / 2), screenH - 100);
   }
   recordingWindow.showInactive();
   send("recording:start");
@@ -259,6 +259,7 @@ app.whenReady().then(async () => {
   // User stopped recording from renderer (Space/Escape/button)
   ipcMain.handle("recording:user-stop", () => {
     isRecording = false;
+    unregisterStopShortcuts();
   });
 
   ipcMain.handle("onboarding:complete", () => {

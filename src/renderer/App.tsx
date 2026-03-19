@@ -8,7 +8,7 @@ import { api } from "./lib/ipc";
 type Status = "idle" | "recording" | "transcribing" | "injecting" | "done" | "empty" | "error";
 type View = "recording" | "settings" | "onboarding";
 
-const RECORDING_SIZE = { w: 200, h: 72 };
+const RECORDING_SIZE = { w: 260, h: 72 };
 const SETTINGS_SIZE = { w: 520, h: 600 };
 const ONBOARDING_SIZE = { w: 420, h: 520 };
 
@@ -18,7 +18,7 @@ export default function App() {
   const [status, setStatus] = useState<Status>("idle");
   const [view, setView] = useState<View>("recording");
   const [ready, setReady] = useState(false);
-  const { stream, startRecording, stopRecording } = useAudioRecorder();
+  const { stream, startRecording, stopRecording, cancelRecording } = useAudioRecorder();
 
   // Refs to avoid stale closures in IPC callbacks
   const viewRef = useRef(view);
@@ -55,6 +55,13 @@ export default function App() {
     stopRecording();
     api?.notifyStop();
   }, [stopRecording]);
+
+  const handleDismiss = useCallback(() => {
+    cancelRecording();
+    setStatus("idle");
+    api?.notifyStop();
+    api?.hideWindow();
+  }, [cancelRecording]);
 
   useEffect(() => {
     if (!api) return;
@@ -119,6 +126,7 @@ export default function App() {
       stream={stream}
       onOpenSettings={openSettings}
       onStop={handleStopRecording}
+      onDismiss={handleDismiss}
     />
   );
 }
